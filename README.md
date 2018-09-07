@@ -1,4 +1,4 @@
-Scribble [![GoDoc](https://godoc.org/github.com/boltdb/bolt?status.svg)](http://godoc.org/github.com/sdomino/scribble) [![Go Report Card](https://goreportcard.com/badge/github.com/sdomino/scribble)](https://goreportcard.com/report/github.com/sdomino/scribble)
+Scribble [![GoDoc](https://godoc.org/github.com/boltdb/bolt?status.svg)](http://godoc.org/github.com/creativeguy2013/scribble) [![Go Report Card](https://goreportcard.com/badge/github.com/creativeguy2013/scribble)](https://goreportcard.com/report/github.com/creativeguy2013/scribble)
 --------
 
 A tiny JSON database in Golang - behaviour is very similar to Google Cloud Firestore
