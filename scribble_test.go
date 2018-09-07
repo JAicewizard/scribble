@@ -1,5 +1,6 @@
 package scribble
 
+/*
 import (
 	"os"
 	"testing"
@@ -203,3 +204,4 @@ func destroyFish(name string) error {
 func destroySchool() error {
 	return db.Delete(collection, "")
 }
+*/

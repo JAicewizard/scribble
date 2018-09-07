@@ -1,10 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 
-	scribble "github.com/nanobox-io/golang-scribble"
+	scribble "github.com/CreativeGuy2013/scribble"
 )
 
 // a fish
@@ -12,35 +11,44 @@ type Fish struct{ Name string }
 
 func main() {
 
-	dir := "./"
+	dir := "./db"
 
-	db, err := scribble.New(dir, nil)
+	db, err := scribble.New(dir)
 	if err != nil {
-		fmt.Println("Error", err)
+		fmt.Println("Error 1", err)
 	}
+
+	fishCollection := db.Collection("fish")
 
 	// Write a fish to the database
 	for _, name := range []string{"onefish", "twofish", "redfish", "bluefish"} {
-		db.Write("fish", name, Fish{Name: name})
+		if err := fishCollection.Document(name).Write(Fish{Name: name}); err != nil {
+			fmt.Println("Error 2", err)
+		}
 	}
+
+	fishCollection.Document("purple").Collection("teeth").Document("3").Write(map[string]string{
+		"one": "two",
+		"two": "three",
+	})
 
 	// Read a fish from the database (passing fish by reference)
 	onefish := Fish{}
-	if err := db.Read("fish", "onefish", &onefish); err != nil {
-		fmt.Println("Error", err)
+	if err := fishCollection.Document("onefish").Read(&onefish); err != nil {
+		fmt.Println("Error 3", err)
 	}
 
 	// Read all fish from the database, unmarshaling the response.
-	records, err := db.ReadAll("fish")
+	records, err := fishCollection.GetDocuments()
 	if err != nil {
-		fmt.Println("Error", err)
+		fmt.Println("Error 4", err)
 	}
 
 	fishies := []Fish{}
 	for _, f := range records {
 		fishFound := Fish{}
-		if err := json.Unmarshal([]byte(f), &fishFound); err != nil {
-			fmt.Println("Error", err)
+		if err := f.Read(&fishFound); err != nil {
+			fmt.Println("Error 5", err)
 		}
 		fishies = append(fishies, fishFound)
 	}

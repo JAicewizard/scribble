@@ -8,8 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/jcelliott/lumber"
 )
 
 // Version is the current version of the project
@@ -27,13 +25,16 @@ type (
 		Trace(string, ...interface{})
 	}
 
-	// Driver is what is used to interact with the scribble database. It runs
-	// transactions, and provides log output
-	Driver struct {
+	//Collection a collection of documents
+	Collection struct {
+		dir string // the directory where scribble will create the database
+	}
+
+	//Document a single document which can have sub collections
+	Document struct {
 		mutex   sync.Mutex
 		mutexes map[string]*sync.Mutex
-		dir     string // the directory where scribble will create the database
-		log     Logger // the logger scribble will log to
+		dir     string
 	}
 )
 
@@ -44,63 +45,99 @@ type Options struct {
 
 // New creates a new scribble database at the desired directory location, and
 // returns a *Driver to then use for interacting with the database
-func New(dir string, options *Options) (*Driver, error) {
-
-	//
+func New(dir string) (*Document, error) {
+	//Clean the filepath before using it
 	dir = filepath.Clean(dir)
 
-	// create default options
-	opts := Options{}
-
-	// if options are passed in, use those
-	if options != nil {
-		opts = *options
-	}
-
-	// if no logger is provided, create a default
-	if opts.Logger == nil {
-		opts.Logger = lumber.NewConsoleLogger(lumber.INFO)
-	}
-
-	//
-	driver := Driver{
+	document := Document{
 		dir:     dir,
 		mutexes: make(map[string]*sync.Mutex),
-		log:     opts.Logger,
 	}
 
-	// if the database already exists, just use it
-	if _, err := os.Stat(dir); err == nil {
-		opts.Logger.Debug("Using '%s' (database already exists)\n", dir)
-		return &driver, nil
+	// if the collection doesn't exist create it
+	if _, err := os.Stat(filepath.Join(document.dir, "doc.json")); err == nil {
+		return &document, nil
 	}
 
-	// if the database doesn't exist create it
-	opts.Logger.Debug("Creating scribble database at '%s'...\n", dir)
-	return &driver, os.MkdirAll(dir, 0755)
+	if _, err := os.Stat(document.dir); err != nil {
+		if err := os.MkdirAll(document.dir, 0755); err != nil {
+			fmt.Println(err.Error())
+			return nil, err
+		}
+	}
+
+	// if the document doesn't exist create it
+	return &document, ioutil.WriteFile(filepath.Join(document.dir, "doc.json"), []byte("{}"), 0644)
+}
+
+//Document gets a document from a collection
+func (c *Collection) Document(key string) *Document {
+	dir := filepath.Join(c.dir, key)
+
+	document := Document{
+		dir:     dir,
+		mutexes: make(map[string]*sync.Mutex),
+	}
+
+	// if the document exists do nothing
+	if _, err := os.Stat(filepath.Join(document.dir, "doc.json")); err == nil {
+		return &document
+	}
+
+	if _, err := os.Stat(document.dir); err != nil {
+		if err := os.MkdirAll(document.dir, 0755); err != nil {
+			fmt.Println(err.Error())
+			return nil
+		}
+	}
+
+	// if the document doesn't exist create it
+	if err := ioutil.WriteFile(filepath.Join(document.dir, "doc.json"), []byte("{}"), 0644); err != nil {
+		fmt.Println(err.Error())
+		return nil
+	}
+
+	return &document
+}
+
+//Collection gets a collction from in a document
+func (d *Document) Collection(name string) *Collection {
+	dir := filepath.Join(d.dir, name)
+
+	collection := Collection{
+		dir: dir,
+	}
+
+	// if the collection already exists, just use it
+	if _, err := os.Stat(d.dir); err == nil {
+		return &collection
+	}
+
+	// if the collection doesn't exist create it
+	if err := os.MkdirAll(d.dir, 0755); err != nil {
+		fmt.Println(err.Error())
+		return nil
+	}
+
+	return &collection
 }
 
 // Write locks the database and attempts to write the record to the database under
 // the [collection] specified with the [resource] name given
-func (d *Driver) Write(collection, resource string, v interface{}) error {
+func (d *Document) Write(v interface{}) error {
 
 	// ensure there is a place to save record
-	if collection == "" {
-		return fmt.Errorf("Missing collection - no place to save record!")
+	if d.dir == "" {
+		return fmt.Errorf("missing document - no place to save record")
 	}
 
-	// ensure there is a resource (name) to save record as
-	if resource == "" {
-		return fmt.Errorf("Missing resource - unable to save record (no name)!")
-	}
-
-	mutex := d.getOrCreateMutex(collection)
+	mutex := d.getOrCreateMutex()
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	//
-	dir := filepath.Join(d.dir, collection)
-	fnlPath := filepath.Join(dir, resource+".json")
+	dir := d.dir
+	fnlPath := filepath.Join(dir, "doc.json")
 	tmpPath := fnlPath + ".tmp"
 
 	// create collection directory
@@ -124,20 +161,15 @@ func (d *Driver) Write(collection, resource string, v interface{}) error {
 }
 
 // Read a record from the database
-func (d *Driver) Read(collection, resource string, v interface{}) error {
+func (d *Document) Read(v interface{}) error {
 
 	// ensure there is a place to save record
-	if collection == "" {
-		return fmt.Errorf("Missing collection - no place to save record!")
-	}
-
-	// ensure there is a resource (name) to save record as
-	if resource == "" {
-		return fmt.Errorf("Missing resource - unable to save record (no name)!")
+	if d.dir == "" {
+		return fmt.Errorf("missing collection - no place to save record")
 	}
 
 	//
-	record := filepath.Join(d.dir, collection, resource)
+	record := filepath.Join(d.dir, "doc.json")
 
 	// check to see if file exists
 	if _, err := stat(record); err != nil {
@@ -145,7 +177,7 @@ func (d *Driver) Read(collection, resource string, v interface{}) error {
 	}
 
 	// read record from database
-	b, err := ioutil.ReadFile(record + ".json")
+	b, err := ioutil.ReadFile(record)
 	if err != nil {
 		return err
 	}
@@ -154,17 +186,16 @@ func (d *Driver) Read(collection, resource string, v interface{}) error {
 	return json.Unmarshal(b, &v)
 }
 
-// ReadAll records from a collection; this is returned as a slice of strings because
-// there is no way of knowing what type the record is.
-func (d *Driver) ReadAll(collection string) ([]string, error) {
+// GetDocuments gets all documents in a collection.
+func (c *Collection) GetDocuments() ([]*Document, error) {
 
 	// ensure there is a collection to read
-	if collection == "" {
-		return nil, fmt.Errorf("Missing collection - unable to record location!")
+	if c.dir == "" {
+		return nil, fmt.Errorf("missing collection - unable to record location")
 	}
 
 	//
-	dir := filepath.Join(d.dir, collection)
+	dir := c.dir
 
 	// check to see if collection (directory) exists
 	if _, err := stat(dir); err != nil {
@@ -176,41 +207,36 @@ func (d *Driver) ReadAll(collection string) ([]string, error) {
 	files, _ := ioutil.ReadDir(dir)
 
 	// the files read from the database
-	var records []string
+	var records []*Document
 
-	// iterate over each of the files, attempting to read the file. If successful
-	// append the files to the collection of read files
+	// iterate over each of the files, and add the resulting document to records
 	for _, file := range files {
-		b, err := ioutil.ReadFile(filepath.Join(dir, file.Name()))
-		if err != nil {
-			return nil, err
-		}
-
 		// append read file
-		records = append(records, string(b))
+		records = append(records, &Document{
+			dir:     filepath.Join(dir, file.Name()),
+			mutexes: make(map[string]*sync.Mutex),
+		})
 	}
 
 	// unmarhsal the read files as a comma delimeted byte array
 	return records, nil
 }
 
-// Delete locks that database and then attempts to remove the collection/resource
-// specified by [path]
-func (d *Driver) Delete(collection, resource string) error {
-	path := filepath.Join(collection, resource)
+// Delete locks that database and removes the document including all of its sub documents
+func (d *Document) Delete() error {
 	//
-	mutex := d.getOrCreateMutex(collection)
+	mutex := d.getOrCreateMutex()
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	//
-	dir := filepath.Join(d.dir, path)
+	dir := d.dir
 
 	switch fi, err := stat(dir); {
 
 	// if fi is nil or error is not nil return
 	case fi == nil, err != nil:
-		return fmt.Errorf("Unable to find file or directory named %v\n", path)
+		return fmt.Errorf("unable to find file or directory named %v", dir)
 
 	// remove directory and all contents
 	case fi.Mode().IsDir():
@@ -219,6 +245,29 @@ func (d *Driver) Delete(collection, resource string) error {
 	// remove file
 	case fi.Mode().IsRegular():
 		return os.RemoveAll(dir + ".json")
+	}
+
+	return nil
+}
+
+// Delete removes a collection and all of its childeren
+func (c *Collection) Delete() error {
+	//
+	dir := c.dir
+
+	switch fi, err := stat(dir); {
+
+	// if fi is nil or error is not nil return
+	case fi == nil, err != nil:
+		return fmt.Errorf("unable to find file or directory named %v", dir)
+
+	// remove directory and all contents
+	case fi.Mode().IsDir():
+		return os.RemoveAll(dir)
+
+	// remove file
+	case fi.Mode().IsRegular():
+		return os.RemoveAll(filepath.Join(dir, "doc.json"))
 	}
 
 	return nil
@@ -237,17 +286,17 @@ func stat(path string) (fi os.FileInfo, err error) {
 
 // getOrCreateMutex creates a new collection specific mutex any time a collection
 // is being modfied to avoid unsafe operations
-func (d *Driver) getOrCreateMutex(collection string) *sync.Mutex {
+func (d *Document) getOrCreateMutex() *sync.Mutex {
 
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	m, ok := d.mutexes[collection]
+	m, ok := d.mutexes[d.dir]
 
 	// if the mutex doesn't exist make it
 	if !ok {
 		m = &sync.Mutex{}
-		d.mutexes[collection] = m
+		d.mutexes[d.dir] = m
 	}
 
 	return m
