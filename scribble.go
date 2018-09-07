@@ -11,7 +11,7 @@ import (
 )
 
 // Version is the current version of the project
-const Version = "1.0.4"
+const Version = "2.0.0"
 
 type (
 
