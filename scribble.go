@@ -103,7 +103,7 @@ func (d *Document) Collection(name string) *Collection {
 	if name == "" {
 		return &Collection{
 			dir: d.dir,
-			err: fmt.Errorf("name for collecton is empty"),
+			err: fmt.Errorf("name for collection is empty"),
 		}
 	} else if d.err != nil {
 		return &Collection{
