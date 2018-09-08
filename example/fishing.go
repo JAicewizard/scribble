@@ -6,7 +6,7 @@ import (
 	scribble "github.com/CreativeGuy2013/scribble"
 )
 
-// a fish
+//Fish is a fish struct
 type Fish struct{ Name string }
 
 func main() {
