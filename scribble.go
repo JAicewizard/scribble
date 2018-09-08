@@ -1,8 +1,8 @@
-// Package scribble is a tiny JSON database
+// Package scribble is a tiny gob database
 package scribble
 
 import (
-	"encoding/json"
+	"encoding/gob"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,20 +11,9 @@ import (
 )
 
 // Version is the current version of the project
-const Version = "2.1.0"
+const Version = "3.0.0"
 
 type (
-
-	// Logger is a generic logger interface
-	Logger interface {
-		Fatal(string, ...interface{})
-		Error(string, ...interface{})
-		Warn(string, ...interface{})
-		Info(string, ...interface{})
-		Debug(string, ...interface{})
-		Trace(string, ...interface{})
-	}
-
 	//Collection a collection of documents
 	Collection struct {
 		dir string // the directory where scribble will create the database
@@ -40,11 +29,6 @@ type (
 	}
 )
 
-// Options uses for specification of working golang-scribble
-type Options struct {
-	Logger // the logger scribble will use (configurable)
-}
-
 // New creates a new scribble database at the desired directory location, and
 // returns a *Driver to then use for interacting with the database
 func New(dir string) (*Document, error) {
@@ -57,7 +41,7 @@ func New(dir string) (*Document, error) {
 	}
 
 	// if the collection doesn't exist create it
-	if _, err := os.Stat(filepath.Join(document.dir, "doc.json")); err == nil {
+	if _, err := os.Stat(filepath.Join(document.dir, "doc.gob")); err == nil {
 		return &document, nil
 	}
 
@@ -69,7 +53,7 @@ func New(dir string) (*Document, error) {
 	}
 
 	// if the document doesn't exist create it
-	return &document, ioutil.WriteFile(filepath.Join(document.dir, "doc.json"), []byte("{}"), 0644)
+	return &document, ioutil.WriteFile(filepath.Join(document.dir, "doc.gob"), []byte("{}"), 0644)
 }
 
 //Document gets a document from a collection
@@ -146,7 +130,7 @@ func (d *Document) Write(v interface{}) error {
 
 	//
 	dir := d.dir
-	fnlPath := filepath.Join(dir, "doc.json")
+	fnlPath := filepath.Join(dir, "doc.gob")
 	tmpPath := fnlPath + ".tmp"
 
 	// create collection directory
@@ -155,13 +139,14 @@ func (d *Document) Write(v interface{}) error {
 	}
 
 	//
-	b, err := json.MarshalIndent(v, "", "\t")
+	b, err := os.Create(tmpPath)
 	if err != nil {
 		return err
 	}
 
-	// write marshaled data to the temp file
-	if err := ioutil.WriteFile(tmpPath, b, 0644); err != nil {
+	//
+	err = gob.NewEncoder(b).Encode(v)
+	if err != nil {
 		return err
 	}
 
@@ -182,7 +167,7 @@ func (d *Document) Read(v interface{}) error {
 	}
 
 	//
-	record := filepath.Join(d.dir, "doc.json")
+	record := filepath.Join(d.dir, "doc.gob")
 
 	// check to see if file exists
 	if _, err := stat(record); err != nil {
@@ -190,13 +175,13 @@ func (d *Document) Read(v interface{}) error {
 	}
 
 	// read record from database
-	b, err := ioutil.ReadFile(record)
+	b, err := os.Open(record)
 	if err != nil {
 		return err
 	}
 
 	// unmarshal data
-	return json.Unmarshal(b, &v)
+	return gob.NewDecoder(b).Decode(v)
 }
 
 // GetDocuments gets all documents in a collection.
@@ -266,7 +251,7 @@ func (d *Document) Delete() error {
 
 	// remove file
 	case fi.Mode().IsRegular():
-		return os.RemoveAll(dir + ".json")
+		return os.RemoveAll(dir + ".gob")
 	}
 
 	return nil
@@ -294,7 +279,7 @@ func (c *Collection) Delete() error {
 
 	// remove file
 	case fi.Mode().IsRegular():
-		return os.RemoveAll(filepath.Join(dir, "doc.json"))
+		return os.RemoveAll(filepath.Join(dir, "doc.gob"))
 	}
 
 	return nil
@@ -315,7 +300,7 @@ func stat(path string) (fi os.FileInfo, err error) {
 
 	// check for dir, if path isn't a directory check to see if it's a file
 	if fi, err = os.Stat(path); os.IsNotExist(err) {
-		fi, err = os.Stat(filepath.Join(path, "doc.json"))
+		fi, err = os.Stat(filepath.Join(path, "doc.gob"))
 	}
 
 	return

@@ -1,8 +1,10 @@
 Scribble (FireScribble Edition) [![GoDoc](https://godoc.org/github.com/boltdb/bolt?status.svg)](http://godoc.org/github.com/creativeguy2013/scribble) [![Go Report Card](https://goreportcard.com/badge/github.com/creativeguy2013/scribble)](https://goreportcard.com/report/github.com/creativeguy2013/scribble) [![Build Status](https://travis-ci.org/CreativeGuy2013/scribble.svg?branch=master)](https://travis-ci.org/CreativeGuy2013/scribble)
 --------
 
-A tiny JSON database in Golang - behaviour is very similar to Google Cloud Firestore
+A tiny GOB based database in Golang - behaviour is very similar to Google Cloud Firestore
 
+**Note**
+If you would rather use JSON instad of GOB please use a version prior to 3.0.0. You will have less functionality and a slower db but it will be human readable.
 
 ### Installation
 

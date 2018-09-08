@@ -27,6 +27,10 @@ func main() {
 		}
 	}
 
+	fishCollection.Document("purple").Write(Fish{
+		Name: "purple",
+	})
+
 	fishCollection.Document("purple").Collection("teeth").Document("3").Write(map[string]string{
 		"one": "two",
 		"two": "three",
