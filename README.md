@@ -70,8 +70,6 @@ for _, f := range records {
 }
 fmt.Println(fishies)
 
-
-
 // Delete a fish from the database
 if err := onefishDocument.Delete(); err != nil {
   fmt.Println("Error", err)
