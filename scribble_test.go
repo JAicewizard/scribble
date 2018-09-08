@@ -1,6 +1,5 @@
 package scribble
 
-/*
 import (
 	"os"
 	"testing"
@@ -13,7 +12,7 @@ type Fish struct {
 
 //
 var (
-	db         *Driver
+	db         *Document
 	database   = "./deep/school"
 	collection = "fish"
 	onefish    = Fish{}
@@ -40,7 +39,6 @@ func TestMain(m *testing.M) {
 
 // Tests creating a new database, and using an existing database
 func TestNew(t *testing.T) {
-
 	// database should not exist
 	if _, err := os.Stat(database); err == nil {
 		t.Error("Expected nothing, got database")
@@ -69,12 +67,12 @@ func TestWriteAndRead(t *testing.T) {
 	createDB()
 
 	// add fish to database
-	if err := db.Write(collection, "redfish", redfish); err != nil {
+	if err := db.Collection(collection).Document("redfish").Write(redfish); err != nil {
 		t.Error("Create fish failed: ", err.Error())
 	}
 
 	// read fish from database
-	if err := db.Read(collection, "redfish", &onefish); err != nil {
+	if err := db.Collection(collection).Document("redfish").Read(&onefish); err != nil {
 		t.Error("Failed to read: ", err.Error())
 	}
 
@@ -87,12 +85,12 @@ func TestWriteAndRead(t *testing.T) {
 }
 
 //
-func TestReadall(t *testing.T) {
+func TestGetDocuments(t *testing.T) {
 
 	createDB()
 	createSchool()
 
-	fish, err := db.ReadAll(collection)
+	fish, err := db.Collection(collection).GetDocuments()
 	if err != nil {
 		t.Error("Failed to read: ", err.Error())
 	}
@@ -110,18 +108,18 @@ func TestWriteAndReadEmpty(t *testing.T) {
 	createDB()
 
 	// create a fish with no home
-	if err := db.Write("", "redfish", redfish); err == nil {
-		t.Error("Allowed write of empty resource", err.Error())
+	if err := db.Collection("").Document("redfish").Write(redfish); err == nil {
+		t.Error("Allowed write of empty resource")
 	}
 
 	// create a home with no fish
-	if err := db.Write(collection, "", redfish); err == nil {
-		t.Error("Allowed write of empty resource", err.Error())
+	if err := db.Collection(collection).Document("").Write(redfish); err == nil {
+		t.Error("Allowed write of empty resource")
 	}
 
 	// no place to read
-	if err := db.Read("", "redfish", onefish); err == nil {
-		t.Error("Allowed read of empty resource", err.Error())
+	if err := db.Collection("").Document("redfish").Read(onefish); err == nil {
+		t.Error("Allowed read of empty resource")
 	}
 
 	destroySchool()
@@ -133,17 +131,17 @@ func TestDelete(t *testing.T) {
 	createDB()
 
 	// add fish to database
-	if err := db.Write(collection, "redfish", redfish); err != nil {
+	if err := db.Collection(collection).Document("redfish").Write(redfish); err != nil {
 		t.Error("Create fish failed: ", err.Error())
 	}
 
 	// delete the fish
-	if err := db.Delete(collection, "redfish"); err != nil {
+	if err := db.Collection(collection).Document("redfish").Delete(); err != nil {
 		t.Error("Failed to delete: ", err.Error())
 	}
 
 	// read fish from database
-	if err := db.Read(collection, "redfish", &onefish); err == nil {
+	if err := db.Collection(collection).Document("redfish").Read(&onefish); err == nil {
 		t.Error("Expected nothing, got fish")
 	}
 
@@ -156,11 +154,16 @@ func TestDeleteall(t *testing.T) {
 	createDB()
 	createSchool()
 
-	if err := db.Delete(collection, ""); err != nil {
+	if err := db.Collection(collection).Delete(); err != nil {
 		t.Error("Failed to delete: ", err.Error())
 	}
 
-	if _, err := os.Stat(collection); err == nil {
+	fish, err := db.Collection(collection).GetDocuments()
+	if err == nil {
+		t.Error("Expected nothing, have fish:", err.Error())
+	}
+
+	if len(fish) > 0 {
 		t.Error("Expected nothing, have fish")
 	}
 
@@ -172,7 +175,7 @@ func TestDeleteall(t *testing.T) {
 // create a new scribble database
 func createDB() error {
 	var err error
-	if db, err = New(database, nil); err != nil {
+	if db, err = New(database); err != nil {
 		return err
 	}
 
@@ -181,13 +184,13 @@ func createDB() error {
 
 // create a fish
 func createFish(fish Fish) error {
-	return db.Write(collection, fish.Type, fish)
+	return db.Collection(collection).Document(fish.Type).Write(fish)
 }
 
 // create many fish
 func createSchool() error {
 	for _, f := range []Fish{{Type: "red"}, {Type: "blue"}} {
-		if err := db.Write(collection, f.Type, f); err != nil {
+		if err := db.Collection(collection).Document(f.Type).Write(f); err != nil {
 			return err
 		}
 	}
@@ -197,11 +200,10 @@ func createSchool() error {
 
 // destroy a fish
 func destroyFish(name string) error {
-	return db.Delete(collection, name)
+	return db.Collection(collection).Document(name).Delete()
 }
 
 // destroy all fish
 func destroySchool() error {
-	return db.Delete(collection, "")
+	return db.Collection(collection).Delete()
 }
-*/

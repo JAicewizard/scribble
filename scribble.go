@@ -11,7 +11,7 @@ import (
 )
 
 // Version is the current version of the project
-const Version = "2.0.0"
+const Version = "2.0.1"
 
 type (
 
@@ -28,6 +28,7 @@ type (
 	//Collection a collection of documents
 	Collection struct {
 		dir string // the directory where scribble will create the database
+		err error
 	}
 
 	//Document a single document which can have sub collections
@@ -35,6 +36,7 @@ type (
 		mutex   sync.Mutex
 		mutexes map[string]*sync.Mutex
 		dir     string
+		err     error
 	}
 )
 
@@ -72,6 +74,20 @@ func New(dir string) (*Document, error) {
 
 //Document gets a document from a collection
 func (c *Collection) Document(key string) *Document {
+	if key == "" {
+		return &Document{
+			dir:     c.dir,
+			mutexes: make(map[string]*sync.Mutex),
+			err:     fmt.Errorf("key for document is empty"),
+		}
+	} else if c.err != nil {
+		return &Document{
+			dir:     c.dir,
+			mutexes: make(map[string]*sync.Mutex),
+			err:     c.err,
+		}
+	}
+
 	dir := filepath.Join(c.dir, key)
 
 	document := Document{
@@ -79,44 +95,27 @@ func (c *Collection) Document(key string) *Document {
 		mutexes: make(map[string]*sync.Mutex),
 	}
 
-	// if the document exists do nothing
-	if _, err := os.Stat(filepath.Join(document.dir, "doc.json")); err == nil {
-		return &document
-	}
-
-	if _, err := os.Stat(document.dir); err != nil {
-		if err := os.MkdirAll(document.dir, 0755); err != nil {
-			fmt.Println(err.Error())
-			return nil
-		}
-	}
-
-	// if the document doesn't exist create it
-	if err := ioutil.WriteFile(filepath.Join(document.dir, "doc.json"), []byte("{}"), 0644); err != nil {
-		fmt.Println(err.Error())
-		return nil
-	}
-
 	return &document
 }
 
 //Collection gets a collction from in a document
 func (d *Document) Collection(name string) *Collection {
+	if name == "" {
+		return &Collection{
+			dir: d.dir,
+			err: fmt.Errorf("name for collecton is empty"),
+		}
+	} else if d.err != nil {
+		return &Collection{
+			dir: d.dir,
+			err: d.err,
+		}
+	}
+
 	dir := filepath.Join(d.dir, name)
 
 	collection := Collection{
 		dir: dir,
-	}
-
-	// if the collection already exists, just use it
-	if _, err := os.Stat(d.dir); err == nil {
-		return &collection
-	}
-
-	// if the collection doesn't exist create it
-	if err := os.MkdirAll(d.dir, 0755); err != nil {
-		fmt.Println(err.Error())
-		return nil
 	}
 
 	return &collection
@@ -125,10 +124,19 @@ func (d *Document) Collection(name string) *Collection {
 // Write locks the database and attempts to write the record to the database under
 // the [collection] specified with the [resource] name given
 func (d *Document) Write(v interface{}) error {
+	if d.err != nil {
+		return d.err
+	}
 
 	// ensure there is a place to save record
 	if d.dir == "" {
 		return fmt.Errorf("missing document - no place to save record")
+	}
+
+	if _, err := os.Stat(d.dir); err != nil {
+		if err := os.MkdirAll(d.dir, 0755); err != nil {
+			return err
+		}
 	}
 
 	mutex := d.getOrCreateMutex()
@@ -162,6 +170,9 @@ func (d *Document) Write(v interface{}) error {
 
 // Read a record from the database
 func (d *Document) Read(v interface{}) error {
+	if d.err != nil {
+		return d.err
+	}
 
 	// ensure there is a place to save record
 	if d.dir == "" {
@@ -188,6 +199,9 @@ func (d *Document) Read(v interface{}) error {
 
 // GetDocuments gets all documents in a collection.
 func (c *Collection) GetDocuments() ([]*Document, error) {
+	if c.err != nil {
+		return nil, c.err
+	}
 
 	// ensure there is a collection to read
 	if c.dir == "" {
@@ -224,6 +238,10 @@ func (c *Collection) GetDocuments() ([]*Document, error) {
 
 // Delete locks that database and removes the document including all of its sub documents
 func (d *Document) Delete() error {
+	if d.err != nil {
+		return d.err
+	}
+
 	//
 	mutex := d.getOrCreateMutex()
 	mutex.Lock()
@@ -252,6 +270,10 @@ func (d *Document) Delete() error {
 
 // Delete removes a collection and all of its childeren
 func (c *Collection) Delete() error {
+	if c.err != nil {
+		return c.err
+	}
+
 	//
 	dir := c.dir
 
@@ -278,7 +300,7 @@ func stat(path string) (fi os.FileInfo, err error) {
 
 	// check for dir, if path isn't a directory check to see if it's a file
 	if fi, err = os.Stat(path); os.IsNotExist(err) {
-		fi, err = os.Stat(path + ".json")
+		fi, err = os.Stat(filepath.Join(path, "doc.json"))
 	}
 
 	return
