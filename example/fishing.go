@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	scribble "github.com/creativeguy2013/scribble"
+	scribble "github.com/CreativeGuy2013/scribble"
 )
 
 //Fish is a fish struct
@@ -43,38 +43,28 @@ func main() {
 	}
 
 	// Read all fish from the database, unmarshaling the response.
-	records, err := fishCollection.GetAllDocuments()
+	records, err := fishCollection.GetDocuments()
 	if err != nil {
 		fmt.Println("Error 4", err)
 	}
-	// records has length 5
-	fmt.Println(len(records))
 
 	fishies := []Fish{}
 	for _, f := range records {
 		fishFound := Fish{}
 		if err := f.Read(&fishFound); err != nil {
-			fmt.Println("Error 6", err)
+			fmt.Println("Error 5", err)
 		}
 		fishies = append(fishies, fishFound)
 	}
-	fmt.Println(fishies)
 
-	// Read a select view of the fish from the database, in this case everything from index 1 to 3
-	records, err = fishCollection.GetDocuments(1, 3)
-	if err != nil {
-		fmt.Println("Error 5", err)
-	}
-	// records has length 2
-	fmt.Println(len(records))
+	// // Delete a fish from the database
+	// if err := db.Delete("fish", "onefish"); err != nil {
+	// 	fmt.Println("Error", err)
+	// }
+	//
+	// // Delete all fish from the database
+	// if err := db.Delete("fish", ""); err != nil {
+	// 	fmt.Println("Error", err)
+	// }
 
-	fishies = []Fish{}
-	for _, f := range records {
-		fishFound := Fish{}
-		if err := f.Read(&fishFound); err != nil {
-			fmt.Println("Error 6", err)
-		}
-		fishies = append(fishies, fishFound)
-	}
-	fmt.Println(fishies)
 }

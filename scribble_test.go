@@ -5,10 +5,12 @@ import (
 	"testing"
 )
 
+//
 type Fish struct {
-	Type string
+	Type string `json:"type"`
 }
 
+//
 var (
 	db         *Document
 	database   = "./deep/school"
@@ -19,6 +21,7 @@ var (
 	bluefish   = Fish{Type: "blue"}
 )
 
+//
 func TestMain(m *testing.M) {
 
 	// remove any thing for a potentially failed previous test
@@ -58,6 +61,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
+//
 func TestWriteAndRead(t *testing.T) {
 
 	createDB()
@@ -80,29 +84,13 @@ func TestWriteAndRead(t *testing.T) {
 	destroySchool()
 }
 
-func TestGetAllDocuments(t *testing.T) {
-
-	createDB()
-	createSchool()
-
-	fish, err := db.Collection(collection).GetAllDocuments()
-	if err != nil {
-		t.Error("Failed to read: ", err.Error())
-	}
-
-	if len(fish) <= 0 {
-		t.Error("Expected some fish, have none")
-	}
-
-	destroySchool()
-}
-
+//
 func TestGetDocuments(t *testing.T) {
 
 	createDB()
 	createSchool()
 
-	fish, err := db.Collection(collection).GetDocuments(1, 3)
+	fish, err := db.Collection(collection).GetDocuments()
 	if err != nil {
 		t.Error("Failed to read: ", err.Error())
 	}
@@ -114,6 +102,7 @@ func TestGetDocuments(t *testing.T) {
 	destroySchool()
 }
 
+//
 func TestWriteAndReadEmpty(t *testing.T) {
 
 	createDB()
@@ -136,6 +125,7 @@ func TestWriteAndReadEmpty(t *testing.T) {
 	destroySchool()
 }
 
+//
 func TestDelete(t *testing.T) {
 
 	createDB()
@@ -158,6 +148,7 @@ func TestDelete(t *testing.T) {
 	destroySchool()
 }
 
+//
 func TestDeleteall(t *testing.T) {
 
 	createDB()
@@ -167,7 +158,7 @@ func TestDeleteall(t *testing.T) {
 		t.Error("Failed to delete: ", err.Error())
 	}
 
-	fish, err := db.Collection(collection).GetAllDocuments()
+	fish, err := db.Collection(collection).GetDocuments()
 	if err == nil {
 		t.Error("Expected nothing, have fish:", err.Error())
 	}
@@ -178,6 +169,8 @@ func TestDeleteall(t *testing.T) {
 
 	destroySchool()
 }
+
+//
 
 // create a new scribble database
 func createDB() error {
