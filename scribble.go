@@ -11,7 +11,7 @@ import (
 )
 
 // Version is the current version of the project
-const Version = "2.0.1"
+const Version = "2.1.0"
 
 type (
 
@@ -124,8 +124,9 @@ func (d *Document) Collection(name string) *Collection {
 // Write locks the database and attempts to write the record to the database under
 // the [collection] specified with the [resource] name given
 func (d *Document) Write(v interface{}) error {
-	if d.err != nil {
-		return d.err
+	// check if there was an error
+	if err := d.Check(); err != nil {
+		return err
 	}
 
 	// ensure there is a place to save record
@@ -170,8 +171,9 @@ func (d *Document) Write(v interface{}) error {
 
 // Read a record from the database
 func (d *Document) Read(v interface{}) error {
-	if d.err != nil {
-		return d.err
+	// check if there was an error
+	if err := d.Check(); err != nil {
+		return err
 	}
 
 	// ensure there is a place to save record
@@ -199,8 +201,9 @@ func (d *Document) Read(v interface{}) error {
 
 // GetDocuments gets all documents in a collection.
 func (c *Collection) GetDocuments() ([]*Document, error) {
-	if c.err != nil {
-		return nil, c.err
+	// check if there was an error
+	if err := c.Check(); err != nil {
+		return nil, err
 	}
 
 	// ensure there is a collection to read
@@ -238,8 +241,9 @@ func (c *Collection) GetDocuments() ([]*Document, error) {
 
 // Delete locks that database and removes the document including all of its sub documents
 func (d *Document) Delete() error {
-	if d.err != nil {
-		return d.err
+	// check if there was an error
+	if err := d.Check(); err != nil {
+		return err
 	}
 
 	//
@@ -270,8 +274,9 @@ func (d *Document) Delete() error {
 
 // Delete removes a collection and all of its childeren
 func (c *Collection) Delete() error {
-	if c.err != nil {
-		return c.err
+	// check if there was an error
+	if err := c.Check(); err != nil {
+		return err
 	}
 
 	//
@@ -293,6 +298,16 @@ func (c *Collection) Delete() error {
 	}
 
 	return nil
+}
+
+//Check if there is an error while getting the collection
+func (c *Collection) Check() error {
+	return c.err
+}
+
+//Check if there is an error while getting the document
+func (d *Document) Check() error {
+	return d.err
 }
 
 //
