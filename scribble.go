@@ -209,9 +209,7 @@ func getDocuments(dir string, start, end int) ([]*Document, error) {
 		}
 		// make only include the files that are requested
 		files = files[start:end]
-	//
-	dir := c.dir
-
+	}
 
 	records := make([]*Document, len(files))
 	// iterate over each of the files, and add the resulting document to records
