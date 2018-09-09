@@ -279,7 +279,7 @@ func (c *Collection) Error() string {
 		return c.err.Error()
 	}
 	
-  turn ""
+  return ""
 }
 
 //Error if there is an error while getting the document
