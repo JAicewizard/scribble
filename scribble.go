@@ -11,7 +11,7 @@ import (
 )
 
 // Version is the current version of the project
-const Version = "3.0.0"
+const Version = "3.0.1"
 
 type (
 	//Collection a collection of documents
@@ -170,7 +170,7 @@ func (d *Document) Read(v interface{}) error {
 	record := filepath.Join(d.dir, "doc.gob")
 
 	// check to see if file exists
-	if _, err := stat(record); err != nil {
+	if _, err := os.Stat(record); err != nil {
 		return err
 	}
 
@@ -200,7 +200,8 @@ func (c *Collection) GetDocuments() ([]*Document, error) {
 	dir := c.dir
 
 	// check to see if collection (directory) exists
-	if _, err := stat(dir); err != nil {
+	if _, err := os.Stat(dir); err != nil {
+		fmt.Println("2: ", err)
 		return nil, err
 	}
 
@@ -239,22 +240,12 @@ func (d *Document) Delete() error {
 	//
 	dir := d.dir
 
-	switch fi, err := stat(dir); {
-
 	// if fi is nil or error is not nil return
-	case fi == nil, err != nil:
-		return fmt.Errorf("unable to find file or directory named %v", dir)
-
-	// remove directory and all contents
-	case fi.Mode().IsDir():
-		return os.RemoveAll(dir)
-
-	// remove file
-	case fi.Mode().IsRegular():
-		return os.RemoveAll(dir + ".gob")
+	if _, err := os.Stat(filepath.Join(dir, "doc.gob")); err != nil {
+		return err
 	}
 
-	return nil
+	return os.RemoveAll(dir)
 }
 
 // Delete removes a collection and all of its childeren
@@ -267,22 +258,12 @@ func (c *Collection) Delete() error {
 	//
 	dir := c.dir
 
-	switch fi, err := stat(dir); {
-
 	// if fi is nil or error is not nil return
-	case fi == nil, err != nil:
-		return fmt.Errorf("unable to find file or directory named %v", dir)
-
-	// remove directory and all contents
-	case fi.Mode().IsDir():
-		return os.RemoveAll(dir)
-
-	// remove file
-	case fi.Mode().IsRegular():
-		return os.RemoveAll(filepath.Join(dir, "doc.gob"))
+	if _, err := os.Stat(dir); err != nil {
+		return err
 	}
 
-	return nil
+	return os.RemoveAll(dir)
 }
 
 //Check if there is an error while getting the collection
@@ -296,7 +277,7 @@ func (d *Document) Check() error {
 }
 
 //
-func stat(path string) (fi os.FileInfo, err error) {
+func statOld(path string) (fi os.FileInfo, err error) {
 
 	// check for dir, if path isn't a directory check to see if it's a file
 	if fi, err = os.Stat(path); os.IsNotExist(err) {
