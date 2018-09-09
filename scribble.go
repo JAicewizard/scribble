@@ -169,7 +169,7 @@ func (d *Document) Read(v interface{}) error {
 	record := filepath.Join(d.dir, "doc.gob")
 
 	// check to see if file exists
-	if _, err := stat(record); err != nil {
+	if _, err := os.Stat(record); err != nil {
 		return err
 	}
 
@@ -186,10 +186,16 @@ func (d *Document) Read(v interface{}) error {
 // GetDocuments gets documents in a collection starting from start til end, if start
 func getDocuments(dir string, start, end int) ([]*Document, error) {
 	// check to see if collection (directory) exists
-	if file, err := stat(dir); err != nil || !file.IsDir() {
+	if file, err := os.Stat(dir); err != nil || !file.IsDir() {
 		return nil, err
 	}
 
+  // check to see if collection (directory) exists
+	if _, err := os.Stat(dir); err != nil {
+		fmt.Println("2: ", err)
+		return nil, err
+	}
+  
 	// read all the files in the transaction.Collection
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
@@ -203,7 +209,9 @@ func getDocuments(dir string, start, end int) ([]*Document, error) {
 		}
 		// make only include the files that are requested
 		files = files[start:end]
-	}
+	//
+	dir := c.dir
+
 
 	records := make([]*Document, len(files))
 	// iterate over each of the files, and add the resulting document to records
@@ -238,17 +246,13 @@ func delete(dir string) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	switch fi, err := stat(dir); {
-
-	// if fi is nil or error is not nil return
-	case fi == nil, err != nil:
-		return fmt.Errorf("unable to find file or directory named %v", dir)
-
-	// remove directory and all contents
-	case fi.Mode().IsDir():
-		return os.RemoveAll(dir)
+  // if fi is nil or error is not nil return
+	if _, err := os.Stat(dir); err != nil {
+		return err
 	}
-	return nil
+
+
+	return os.RemoveAll(dir)
 }
 
 // Delete locks that database and removes the document including all of its sub documents
@@ -276,7 +280,8 @@ func (c *Collection) Error() string {
 	if c.err != nil {
 		return c.err.Error()
 	}
-	return ""
+	
+  turn ""
 }
 
 //Error if there is an error while getting the document
@@ -287,7 +292,7 @@ func (d *Document) Error() string {
 	return ""
 }
 
-func stat(path string) (fi os.FileInfo, err error) {
+func statOld(path string) (fi os.FileInfo, err error) {
 	// check for dir, if path isn't a directory check to see if it's a file
 	if fi, err = os.Stat(path); os.IsNotExist(err) {
 		fi, err = os.Stat(filepath.Join(path, "doc.gob"))
